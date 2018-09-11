@@ -2,17 +2,14 @@ package xyz.jetdrone.paas.ai;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
-import org.infinispan.health.Health;
-import org.infinispan.health.HealthStatus;
-import org.infinispan.manager.EmbeddedCacheManager;
+import io.vertx.spi.cluster.hazelcast.ClusterHealthCheck;
 
 public class AIVerticle extends AbstractVerticle {
 
@@ -66,17 +63,7 @@ public class AIVerticle extends AbstractVerticle {
   }
 
   private HealthChecks createHealthChecks() {
-    return HealthChecks.create(vertx)
-      .register("ispn-cluster-status", future -> {
-        VertxInternal vertxInternal = (VertxInternal) vertx;
-        InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
-        EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
-        Health health = cacheManager.getHealth();
-        HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();
-        Status status = new Status()
-          .setOk(healthStatus == HealthStatus.HEALTHY)
-          .setData(JsonObject.mapFrom(health));
-        future.complete(status);
-      });
+    Handler<Future<Status>> procedure = ClusterHealthCheck.createProcedure(vertx);
+    return HealthChecks.create(vertx).register("cluster-health", procedure);
   }
 }

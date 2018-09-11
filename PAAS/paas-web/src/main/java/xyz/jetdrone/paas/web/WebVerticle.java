@@ -2,11 +2,9 @@ package xyz.jetdrone.paas.web;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.impl.VertxInternal;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.PermittedOptions;
-import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.healthchecks.Status;
@@ -14,9 +12,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.sockjs.BridgeOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
-import org.infinispan.health.Health;
-import org.infinispan.health.HealthStatus;
-import org.infinispan.manager.EmbeddedCacheManager;
+import io.vertx.spi.cluster.hazelcast.ClusterHealthCheck;
 
 public class WebVerticle extends AbstractVerticle {
 
@@ -43,7 +39,7 @@ public class WebVerticle extends AbstractVerticle {
     // Create the HTTP server and pass the "accept" method to the request handler.
     vertx
       .createHttpServer()
-      .requestHandler(app::accept)
+      .requestHandler(app)
       .listen(
         // Retrieve the port from the configuration, default to 8080.
         config().getInteger("http.port", 8080), ar -> {
@@ -56,17 +52,7 @@ public class WebVerticle extends AbstractVerticle {
   }
 
   private HealthChecks createHealthChecks() {
-    return HealthChecks.create(vertx)
-      .register("ispn-cluster-status", future -> {
-        VertxInternal vertxInternal = (VertxInternal) vertx;
-        InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
-        EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
-        Health health = cacheManager.getHealth();
-        HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();
-        Status status = new Status()
-          .setOk(healthStatus == HealthStatus.HEALTHY)
-          .setData(JsonObject.mapFrom(health));
-        future.complete(status);
-      });
+    Handler<Future<Status>> procedure = ClusterHealthCheck.createProcedure(vertx);
+    return HealthChecks.create(vertx).register("cluster-health", procedure);
   }
 }

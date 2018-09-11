@@ -18,5 +18,5 @@ spec:
                   apiVersion: v1
                   fieldPath: metadata.namespace
             - name: JAVA_ARGS
-              value: '-Dvertx.cacheDirBase=/tmp -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true -cluster'
+              value: '-Dvertx.cacheDirBase=/tmp -Djava.net.preferIPv4Stack=true -cluster'
           terminationGracePeriodSeconds: 90

@@ -3,8 +3,6 @@ kind: Service
 metadata:
   name: ${project.artifactId}
 spec:
-  selector:
-    cluster: ${project.artifactId}
   ports:
     - protocol: TCP
       port: 80
